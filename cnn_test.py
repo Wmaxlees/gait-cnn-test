@@ -134,17 +134,17 @@ folder = '/home/max/repos/mvsclass/data'
 files = []
 labels = []
 for label in os.listdir(folder):
-    labels.append(label_dict[int(label)])
     for file in os.listdir(folder + '/' + label):
         filename = folder + '/' + label + '/' + file
         files.append(filename)
+        labels.append(label_dict[int(label)])
+files = np.array(files)
+labels = np.array(labels)
 
 
 with tf.Session() as sess:
-    init = tf.global_variables_initializer()
-
     input_layer = tf.placeholder(tf.float32, (batch_size, input_width, 20, 3))
-    target_layer = tf.placeholder(tf.float32, (batch_size,))
+    target_layer = tf.placeholder(tf.uint8, (batch_size,))
     aligner = alignment_layer(input_layer, target_width)
 
     conv_1 = tf.layers.conv2d(aligner, filters_1, filter_size_1)
@@ -161,17 +161,18 @@ with tf.Session() as sess:
     target = tf.one_hot(target_layer, number_of_classes)
     loss = tf.losses.softmax_cross_entropy(target, logits)
 
-    trainer = tf.train.AdamOptimizer()
+    trainer = tf.train.AdamOptimizer().minimize(loss)
 
+    init = tf.global_variables_initializer()
     sess.run(init)
 
     for i in range(10000):
-        indices = np.random.rand(batch_size)
-        files = files[indices]
+        indices = np.random.randint(files.shape[0], size=batch_size)
+        choices = files[indices]
         targets = labels[indices]
 
         input_values = []
-        for filename in choice:
+        for filename in choices:
             value = np.load(filename)
             value = fix_length(value, input_width)
 
