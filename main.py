@@ -64,7 +64,8 @@ def unsupervised_conv2d (input_layer, number_of_filters, filter_size, stride, pa
     with tf.variable_scope(name) as scope:
         channel_in = int(input_layer.get_shape()[3])
         _filters = tf.Variable(tf.random_normal(filter_size + (channel_in, number_of_filters,)), dtype=dtype)
-        conv_layer = tf.nn.conv2d(input_layer, _filters, (1, ) + stride + (1, ), padding)
+        _biases = tf.Variable(tf.random_normal(number_of_filters))
+        conv_layer = tf.nn.bias_add(tf.nn.conv2d(input_layer, _filters, (1, ) + stride + (1, ), padding), _bias)
 
     # Add the activation function if needed
     if activation is not None:
@@ -120,7 +121,7 @@ with tf.Session() as sess:
     sess.run(init)
 
 
-    for i in range(1000):
+    for i in range(10000):
         choice = np.random.choice(files, size=batch_size)
 
         input_values = []
