@@ -80,33 +80,34 @@ label_dict = {
     9703563942: 54
 }
 
-def alignment_layer (input_layer, alignment_width, dtype=tf.float32):
-    batch_size = input_layer.get_shape().as_list()[0]
-    input_length = input_layer.get_shape().as_list()[1]
+def alignment_layer (input_layer, alignment_width, name='alignment_layer', dtype=tf.float32):
+    with tf.variable_scope('alignment_layer') as scope:
+        batch_size = input_layer.get_shape().as_list()[0]
+        input_length = input_layer.get_shape().as_list()[1]
 
-    diagonal = tf.Variable(tf.linspace(0.0, 1.0, alignment_width), dtype=dtype)
-    cumulative_diagonal = tf.cumsum(diagonal)
+        diagonal = tf.Variable(tf.linspace(0.0, 1.0, alignment_width), dtype=dtype)
+        cumulative_diagonal = tf.cumsum(diagonal)
 
-    distance = pairwise_euclidean_distance(input_layer)
-    cumulative_distance = tf.cumsum(distance)
-    cumulative_distance = tf.expand_dims(cumulative_distance, 2)
+        distance = pairwise_euclidean_distance(input_layer)
+        cumulative_distance = tf.cumsum(distance)
+        cumulative_distance = tf.expand_dims(cumulative_distance, 2)
 
-    cumulative_diagonal = tf.expand_dims(cumulative_diagonal, 0)
-    cumulative_diagonal = tf.tile(cumulative_diagonal, [input_length, 1])
-    cumulative_diagonal = tf.expand_dims(cumulative_diagonal, 0)
-    cumulative_diagonal = tf.tile(cumulative_diagonal, [batch_size, 1, 1])
+        cumulative_diagonal = tf.expand_dims(cumulative_diagonal, 0)
+        cumulative_diagonal = tf.tile(cumulative_diagonal, [input_length, 1])
+        cumulative_diagonal = tf.expand_dims(cumulative_diagonal, 0)
+        cumulative_diagonal = tf.tile(cumulative_diagonal, [batch_size, 1, 1])
 
-    difference = tf.subtract(cumulative_diagonal, cumulative_distance)
-    indices = tf.argmin(tf.abs(difference), 1)
+        difference = tf.subtract(cumulative_diagonal, cumulative_distance)
+        indices = tf.argmin(tf.abs(difference), 1)
 
-    split_batches = tf.unstack(input_layer, axis=0)
-    split_indices = tf.unstack(indices, axis=0)
-    result = []
-    for i in range(batch_size):
-        result.append(tf.gather(split_batches[i], split_indices[i]))
-    result = tf.stack(result)
+        split_batches = tf.unstack(input_layer, axis=0)
+        split_indices = tf.unstack(indices, axis=0)
+        result = []
+        for i in range(batch_size):
+            result.append(tf.gather(split_batches[i], split_indices[i]))
+        result = tf.stack(result)
 
-    return result
+        return result
 
 
 def pairwise_euclidean_distance (input_layer):
@@ -165,6 +166,8 @@ with tf.Session() as sess:
 
     init = tf.global_variables_initializer()
     sess.run(init)
+
+    writer = tf.summary.FileWriter('logs/', sess.graph)
 
     for i in range(10000):
         indices = np.random.randint(files.shape[0], size=batch_size)
